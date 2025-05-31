@@ -118,6 +118,31 @@ def simulate(routers: Dict[str, Router]):
     for name in all_nodes:
         routers[name].print_routing(all_nodes)
 
+def apply_updates(stdin, routers: Dict[str, Router]) -> bool:
+    changed = False
+    for line in stdin:
+        line = line.strip()
+        if line == "END":
+            break
+        if not line:
+            continue
+        u, v, w = line.split()
+        w = int(w)
+        if u not in routers:
+            routers[u] = Router(u)
+        if v not in routers:
+            routers[v] = Router(v)
+
+        if w == -1:
+            changed |= routers[u].neigh.pop(v, None) is not None
+            changed |= routers[v].neigh.pop(u, None) is not None
+        else:
+            prev = routers[u].neigh.get(v)
+            routers[u].neigh[v] = w
+            routers[v].neigh[u] = w
+            changed |= prev != w
+    return changed
+
 if __name__ == "__main__":
     router_names = read_router_names(sys.stdin)
     routers: Dict[str, Router] = {n: Router(n) for n in router_names}
@@ -127,8 +152,10 @@ if __name__ == "__main__":
     all_nodes = sorted(routers.keys())
     for r in routers.values():
         r.init_table(all_nodes)
-
-    #for name in all_nodes:
-    #    routers[name].print_distance(t=0, all_nodes=all_nodes)
-
     simulate(routers)
+
+    if apply_updates(sys.stdin, routers):
+        all_nodes = sorted(routers)
+        for r in routers.values():
+            r.init_table(all_nodes)
+        simulate(routers)    
